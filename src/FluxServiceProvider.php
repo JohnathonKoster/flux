@@ -2,6 +2,7 @@
 
 namespace Flux;
 
+use Flux\Compiler\TagCompiler;
 use Illuminate\View\ComponentAttributeBag;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Blade;
@@ -45,7 +46,13 @@ class FluxServiceProvider extends ServiceProvider
 
     public function bootTagCompiler()
     {
-        $compiler = new FluxTagCompiler(
+        /*$compiler = new FluxTagCompiler(
+            app('blade.compiler')->getClassComponentAliases(),
+            app('blade.compiler')->getClassComponentNamespaces(),
+            app('blade.compiler')
+        );*/
+
+        $compiler = new TagCompiler(
             app('blade.compiler')->getClassComponentAliases(),
             app('blade.compiler')->getClassComponentNamespaces(),
             app('blade.compiler')
