@@ -2,6 +2,7 @@
 
 namespace Flux;
 
+use Flux\Compiler\FluxBladeCompiler;
 use Flux\Compiler\TagCompiler;
 use Illuminate\View\ComponentAttributeBag;
 use Illuminate\Support\ServiceProvider;
@@ -10,6 +11,8 @@ use Illuminate\Support\Arr;
 
 class FluxServiceProvider extends ServiceProvider
 {
+    protected $cacheCompiler = true;
+
     public function register(): void
     {
         $this->app->alias(FluxManager::class, 'flux');
@@ -46,17 +49,19 @@ class FluxServiceProvider extends ServiceProvider
 
     public function bootTagCompiler()
     {
-        /*$compiler = new FluxTagCompiler(
-            app('blade.compiler')->getClassComponentAliases(),
-            app('blade.compiler')->getClassComponentNamespaces(),
-            app('blade.compiler')
-        );*/
-
-        $compiler = new TagCompiler(
-            app('blade.compiler')->getClassComponentAliases(),
-            app('blade.compiler')->getClassComponentNamespaces(),
-            app('blade.compiler')
-        );
+        if ($this->cacheCompiler) {
+            $compiler = new TagCompiler(
+                app('blade.compiler')->getClassComponentAliases(),
+                app('blade.compiler')->getClassComponentNamespaces(),
+                app('blade.compiler'),
+            );
+        } else {
+            $compiler = new FluxTagCompiler(
+                app('blade.compiler')->getClassComponentAliases(),
+                app('blade.compiler')->getClassComponentNamespaces(),
+                app('blade.compiler')
+            );
+        }
 
         app()->bind('flux.compiler', fn () => $compiler);
 
@@ -67,6 +72,10 @@ class FluxServiceProvider extends ServiceProvider
 
     public function bootMacros()
     {
+        app('view')::macro('getCurrentComponentForFlux', function () {
+            return $this->componentStack[array_key_last($this->componentStack)];
+        });
+
         app('view')::macro('getCurrentComponentData', function () {
             return $this->currentComponentData;
         });

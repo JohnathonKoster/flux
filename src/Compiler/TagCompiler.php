@@ -3,6 +3,10 @@
 namespace Flux\Compiler;
 
 use Egulias\EmailValidator\Result\Reason\AtextAfterCFWS;
+use Flux\Compiler\Concerns\CompilesClosingTags;
+use Flux\Compiler\Concerns\CompilesFluxComponentDirectives;
+use Flux\Compiler\Concerns\CompilesInnerContent;
+use Flux\Flux;
 use Illuminate\Support\Str;
 use Illuminate\View\Compilers\ComponentTagCompiler;
 use Stillat\BladeParser\Nodes\Components\ComponentNode;
@@ -10,8 +14,16 @@ use Stillat\BladeParser\Parser\DocumentParser;
 
 class TagCompiler extends ComponentTagCompiler
 {
+    use CompilesFluxComponentDirectives,
+        CompilesInnerContent,
+        CompilesClosingTags;
+
+    protected array $nodes = [];
+
     public function compile($value)
     {
+        $this->nodes = [];
+
         if (! $value) {
             return $value;
         }
@@ -59,58 +71,51 @@ class TagCompiler extends ComponentTagCompiler
             $attributes = $this->getAttributesFromAttributeString($node->parameterContent);
         }
 
-        return $this->componentString(
-            'flux::'.$node->name,
-            $attributes
-        );
-    }
+        $this->nodes[$node->id] = $node;
 
-    protected function compileInnerContent(ComponentNode $node)
-    {
-        $innerContent = $node->innerDocumentContent;
+        $componentString = $this->componentString('flux::'.$node->name, $attributes);
+        $lines = explode("\n", $componentString);
 
-        if (Str::contains($innerContent, ['<flux:', '<flux-'])) {
-            $innerContent = $this->compileChildNodes($node->childNodes);
-        }
+        $first = Str::after($lines[0], '##BEGIN-COMPONENT-CLASS##');
+        $first = mb_substr($first, 11, -1);
 
-        return $innerContent;
+        $first = '##BEGIN-COMPONENT-CLASS##'.$this->compileFluxComponent($node->id, $first);
+        $lines[0] = $first;
+
+        return implode("\n", $lines);
     }
 
     protected function compileFluxTag(ComponentNode $node)
     {
+        $innerContent = $this->compileInnerContent($node);
+
         if ($node->name ===  'delegate-component') {
             $attributes = $this->getAttributesFromAttributeString($node->parameterContent);
             $component = $attributes['component'];
             $class = \Illuminate\View\AnonymousComponent::class;
+
+            $expression = "'{$class}', 'flux::' . {$component}, [
+    'view' => (app()->version() >= 12 ? hash('xxh128', 'flux') : md5('flux')) . '::' . {$component},
+    'data' => \$__env->getCurrentComponentData(),
+]";
+
+            $leading = "<?php if (!Flux::componentExists(\$name = {$component})) throw new \Exception(\"Flux component [{\$name}] does not exist.\"); ?>";
+            $compiledOpen = '##BEGIN-COMPONENT-CLASS##'.$this->compileFluxComponent($node->id, $expression);
+            $compiledEnd = $this->compileClosingTag($node->isClosedBy);
+
+            return $leading.$compiledOpen.$innerContent.$compiledEnd;
+            ray($leading.$compiledOpen.$innerContent.$compiledEnd);
+
+            dd('hm');
 
             // Laravel 12+ uses xxh128 hashing for views https://github.com/laravel/framework/pull/52301...
             return "<?php if (!Flux::componentExists(\$name = {$component})) throw new \Exception(\"Flux component [{\$name}] does not exist.\"); ?>##BEGIN-COMPONENT-CLASS##@component('{$class}', 'flux::' . {$component}, [
     'view' => (app()->version() >= 12 ? hash('xxh128', 'flux') : md5('flux')) . '::' . {$component},
     'data' => \$__env->getCurrentComponentData(),
 ])
-<?php \$component->withAttributes(\$attributes->getAttributes()); ?>".$this->compileInnerContent($node).$this->compileClosingTag($node->isClosedBy);
+<?php \$component->withAttributes(\$attributes->getAttributes()); ?>" . $innerContent . '/** THE DELEGATE COMPONENT IDEA */' . $this->compileClosingTag($node->isClosedBy);
         }
 
-        return $this->fluxComponentString($node).$this->compileInnerContent($node).$this->compileClosingTag($node->isClosedBy);
-    }
-
-    protected function compileSelfClosingTag(ComponentNode $node)
-    {
-        $attributes = $this->getAttributesFromAttributeString($node->parameterContent);
-
-        if (isset($attributes['slot'])) {
-            $slot = $attributes['slot'];
-
-            unset($attributes['slot']);
-
-            return '@slot('.$slot.') ' . $this->fluxComponentString($node, $attributes)."\n@endComponentClass##END-COMPONENT-CLASS##" . ' @endslot';
-        }
-
-        return $this->fluxComponentString($node)."\n@endComponentClass##END-COMPONENT-CLASS##";
-    }
-
-    protected function compileClosingTag(ComponentNode $node)
-    {
-        return ' @endComponentClass##END-COMPONENT-CLASS##';
+        return $this->fluxComponentString($node) . $innerContent . $this->compileClosingTag($node->isClosedBy);
     }
 }

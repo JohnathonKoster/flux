@@ -2,6 +2,7 @@
 
 namespace Flux;
 
+use Flux\Cache\CacheManager;
 use Flux\Concerns\InteractsWithComponents;
 use Composer\InstalledVersions;
 use Illuminate\Support\Str;
@@ -14,6 +15,18 @@ class FluxManager
     use InteractsWithComponents;
 
     public $hasRenderedAssets = false;
+
+    protected $cache;
+
+    public function __construct()
+    {
+        $this->cache = new CacheManager;
+    }
+
+    public function cache()
+    {
+        return $this->cache;
+    }
 
     public function boot()
     {

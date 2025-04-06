@@ -1,5 +1,9 @@
 @aware([ 'variant' ])
 
+@php
+    \Flux\Flux::cache()->ignore('value');
+@endphp
+
 @props([
     'variant' => 'default',
 ])
