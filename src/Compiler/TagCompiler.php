@@ -2,7 +2,6 @@
 
 namespace Flux\Compiler;
 
-use Egulias\EmailValidator\Result\Reason\AtextAfterCFWS;
 use Illuminate\Support\Str;
 use Illuminate\View\Compilers\ComponentTagCompiler;
 use Stillat\BladeParser\Nodes\Components\ComponentNode;
