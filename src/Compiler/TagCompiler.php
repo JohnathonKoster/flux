@@ -25,9 +25,9 @@ class TagCompiler extends ComponentTagCompiler
             ->join('');
     }
 
-    protected function compileChildNodes(array $nodes)
+    protected function compileChildNodes(ComponentNode $node)
     {
-        return collect($nodes)
+        return collect($node->childNodes ?? [])
             ->map(fn($node) => $this->compileNode($node))
             ->join('');
     }
@@ -39,7 +39,7 @@ class TagCompiler extends ComponentTagCompiler
         }
 
         return $node->content.
-            $this->compileChildNodes($node->childNodes ?? []).
+            $this->compileChildNodes($node).
             $node->isClosedBy?->content ?? '';
     }
 
@@ -76,11 +76,6 @@ class TagCompiler extends ComponentTagCompiler
         );
     }
 
-    protected function compileInnerContent(ComponentNode $node)
-    {
-        return $this->compileChildNodes($node->childNodes ?? []);
-    }
-
     protected function compileFluxTag(ComponentNode $node)
     {
         if ($node->name ===  'delegate-component') {
@@ -93,10 +88,10 @@ class TagCompiler extends ComponentTagCompiler
     'view' => (app()->version() >= 12 ? hash('xxh128', 'flux') : md5('flux')) . '::' . {$component},
     'data' => \$__env->getCurrentComponentData(),
 ])
-<?php \$component->withAttributes(\$attributes->getAttributes()); ?>".$this->compileInnerContent($node).$this->compileClosingTag($node->isClosedBy);
+<?php \$component->withAttributes(\$attributes->getAttributes()); ?>".$this->compileChildNodes($node).$this->compileClosingTag($node->isClosedBy);
         }
 
-        return $this->fluxComponentString($node).$this->compileInnerContent($node).$this->compileClosingTag($node->isClosedBy);
+        return $this->fluxComponentString($node).$this->compileChildNodes($node).$this->compileClosingTag($node->isClosedBy);
     }
 
     protected function compileSelfClosingTag(ComponentNode $node)
