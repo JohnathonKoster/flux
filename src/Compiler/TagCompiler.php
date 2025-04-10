@@ -21,7 +21,8 @@ class TagCompiler extends ComponentTagCompiler
             ->parseTemplate($value)
             ->toDocument()
             ->getRootNodes()
-            ->map(fn ($node) => $this->compileNode($node))->join('');
+            ->map(fn ($node) => $this->compileNode($node))
+            ->join('');
     }
 
     protected function compileChildNodes(array $nodes)
