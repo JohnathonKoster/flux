@@ -66,13 +66,7 @@ class TagCompiler extends ComponentTagCompiler
 
     protected function compileInnerContent(ComponentNode $node)
     {
-        $innerContent = $node->innerDocumentContent;
-
-        if (Str::contains($innerContent, ['<flux:', '<flux-'])) {
-            $innerContent = $this->compileChildNodes($node->childNodes);
-        }
-
-        return $innerContent;
+        return $this->compileChildNodes($node->childNodes ?? []);
     }
 
     protected function compileFluxTag(ComponentNode $node)
