@@ -97,6 +97,7 @@ class TagCompiler extends ComponentTagCompiler
     {
         $attributes = $this->getAttributesFromAttributeString($node->parameterContent);
 
+        // TODO: We will have to hoist these out later once we manage slots separately.
         if (isset($attributes['slot'])) {
             $slot = $attributes['slot'];
 
