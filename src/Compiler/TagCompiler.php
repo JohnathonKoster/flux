@@ -25,10 +25,33 @@ class TagCompiler extends ComponentTagCompiler
             ->join('');
     }
 
+    protected function isFluxComponent(ComponentNode $node)
+    {
+        return mb_strtolower($node->componentPrefix) === 'flux';
+    }
+
+    protected function isSlot($node)
+    {
+        return $node instanceof ComponentNode && mb_strtolower($node->tagName) === 'slot';
+    }
+
+    protected function compileFluxSlot(ComponentNode $node)
+    {
+        return $this->compileNode($node);
+    }
+
     protected function compileChildNodes(ComponentNode $node)
     {
+        $isFluxComponent = $this->isFluxComponent($node);
+
         return collect($node->childNodes ?? [])
-            ->map(fn($node) => $this->compileNode($node))
+            ->map(function ($node) use ($isFluxComponent) {
+                if ($isFluxComponent && $this->isSlot($node)) {
+                    return $this->compileFluxSlot($node);
+                }
+
+                return $this->compileNode($node);
+            })
             ->join('');
     }
 
