@@ -60,7 +60,7 @@ class FluxServiceProvider extends ServiceProvider
 
         app()->bind('flux.compiler', fn () => $compiler);
 
-        app('blade.compiler')->precompiler(function ($in) use ($compiler) {
+        app('blade.compiler')->prepareStringsForCompilationUsing(function ($in) use ($compiler) {
             return $compiler->compile($in);
         });
     }
