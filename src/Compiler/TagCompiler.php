@@ -37,7 +37,28 @@ class TagCompiler extends ComponentTagCompiler
 
     protected function compileFluxSlot(ComponentNode $node)
     {
-        return $this->compileNode($node);
+        $attributes = $this->getAttributesFromAttributeString($node->parameterContent);
+
+        $hasNameAttribute = $node->hasParameter('name');
+        $hasInlineName = mb_strtolower($node->name) !== 'slot'; // The "name" will contain the slot: prefix.
+        $name = null;
+
+        if ($hasInlineName) {
+            $name = str($node->name)
+                ->after('slot:') // Skip the slot prefix
+                ->camel()
+                ->wrap("'", "'")
+                ->value();
+        } else {
+            $nameAttribute = $node->getParameter('name');
+            unset($attributes['name']); // Goodbye.
+
+            $name = $nameAttribute->valueNode->content; // This will contain the original quotes.
+        }
+
+        return " @slot({$name}, null, [".$this->attributesToString($attributes).']) '.
+            $this->compileChildNodes($node).
+            " @endslot";
     }
 
     protected function compileChildNodes(ComponentNode $node)
