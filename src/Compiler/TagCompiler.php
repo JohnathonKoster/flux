@@ -32,6 +32,17 @@ class TagCompiler extends ComponentTagCompiler
             ->join('');
     }
 
+    protected function compileBladeComponent(ComponentNode $node)
+    {
+        if ($node->isSelfClosing) {
+            return $node->content;
+        }
+
+        return $node->content.
+            $this->compileChildNodes($node->childNodes ?? []).
+            $node->isClosedBy?->content ?? '';
+    }
+
     protected function compileNode($node)
     {
         if (! $node instanceof ComponentNode) {
@@ -39,7 +50,7 @@ class TagCompiler extends ComponentTagCompiler
         }
 
         if ($node->componentPrefix != 'flux') {
-            return $node->outerDocumentContent;
+            return $this->compileBladeComponent($node);
         }
 
         if ($node->isClosingTag && ! $node->isSelfClosing) {
